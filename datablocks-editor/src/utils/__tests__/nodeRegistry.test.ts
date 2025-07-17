@@ -17,13 +17,15 @@ describe('NodeRegistry', () => {
     description: `Test node of type ${type}`,
     version: '1.0.0',
     inputs: [],
-    outputs: [{
-      id: 'output',
-      name: 'Output',
-      type: 'dataset',
-      required: false,
-      multiple: false,
-    }],
+    outputs: [
+      {
+        id: 'output',
+        name: 'Output',
+        type: 'dataset',
+        required: false,
+        multiple: false,
+      },
+    ],
     configSchema: {},
     processor: {
       execute: async () => ({}),
@@ -35,7 +37,7 @@ describe('NodeRegistry', () => {
   describe('register', () => {
     it('should register a valid node definition', () => {
       const definition = createTestNodeDefinition('file-input');
-      
+
       expect(() => registry.register(definition)).not.toThrow();
       expect(registry.get('file-input')).toBe(definition);
     });
@@ -54,7 +56,7 @@ describe('NodeRegistry', () => {
       const definition2 = createTestNodeDefinition('duplicate');
 
       registry.register(definition1);
-      
+
       // Should not throw, but should warn (we can't easily test console.warn)
       expect(() => registry.register(definition2)).not.toThrow();
       expect(registry.get('duplicate')).toBe(definition2);
@@ -89,7 +91,7 @@ describe('NodeRegistry', () => {
         name: 'File Input',
         description: 'Load data from files',
       };
-      
+
       const pasteNode = {
         ...createTestNodeDefinition('paste-input'),
         name: 'Paste Data',
@@ -104,7 +106,7 @@ describe('NodeRegistry', () => {
 
       expect(fileResults).toHaveLength(1);
       expect(fileResults[0].type).toBe('file-input');
-      
+
       expect(dataResults).toHaveLength(2); // Both contain "data"
     });
 
@@ -125,10 +127,10 @@ describe('NodeRegistry', () => {
   describe('unregister', () => {
     it('should remove node from registry', () => {
       const definition = createTestNodeDefinition('removable');
-      
+
       registry.register(definition);
       expect(registry.get('removable')).toBeDefined();
-      
+
       registry.unregister('removable');
       expect(registry.get('removable')).toBeUndefined();
     });

@@ -1,20 +1,21 @@
 import { describe, it, expect } from 'vitest';
 import {
   isValidDataType,
-  isDataset,
   validateDataset,
   validateNodeConfig,
   inferPrimitiveType,
-  inferDatasetTypes,
 } from '../validation';
-import { Dataset, NodeConfigSchema } from '../../types';
+import type { Dataset, NodeConfigSchema } from '../../types';
 
 describe('Validation Utils', () => {
   describe('isValidDataType', () => {
     it('should validate dataset type', () => {
       const dataset: Dataset = {
         columns: ['name', 'age'],
-        rows: [['John', 30], ['Jane', 25]],
+        rows: [
+          ['John', 30],
+          ['Jane', 25],
+        ],
         metadata: {
           rowCount: 2,
           columnCount: 2,
@@ -54,7 +55,10 @@ describe('Validation Utils', () => {
     it('should validate correct dataset', () => {
       const dataset: Dataset = {
         columns: ['name', 'age'],
-        rows: [['John', 30], ['Jane', 25]],
+        rows: [
+          ['John', 30],
+          ['Jane', 25],
+        ],
         metadata: {
           rowCount: 2,
           columnCount: 2,

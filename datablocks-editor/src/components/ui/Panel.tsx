@@ -16,7 +16,7 @@ export const Panel: React.FC<PanelProps> = ({
   className,
   headerActions,
   collapsible = false,
-  defaultCollapsed = false
+  defaultCollapsed = false,
 }) => {
   const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed);
 
@@ -27,7 +27,9 @@ export const Panel: React.FC<PanelProps> = ({
   };
 
   return (
-    <div className={cn('bg-gray-800 border border-gray-700 rounded-lg', className)}>
+    <div
+      className={cn('bg-gray-800 border border-gray-700 rounded-lg', className)}
+    >
       {title && (
         <div
           className={cn(
@@ -65,11 +67,7 @@ export const Panel: React.FC<PanelProps> = ({
           </div>
         </div>
       )}
-      {!isCollapsed && (
-        <div className="p-4">
-          {children}
-        </div>
-      )}
+      {!isCollapsed && <div className="p-4">{children}</div>}
     </div>
   );
 };

@@ -1,6 +1,5 @@
-import {
+import type {
   Dataset,
-  PrimitiveType,
   NodeInstance,
   Connection,
   ExecutionGraph,
@@ -39,10 +38,14 @@ export const createDatasetFromArray = (
   }
 
   // If data is array of objects, extract columns and convert to rows
-  if (typeof data[0] === 'object' && data[0] !== null && !Array.isArray(data[0])) {
+  if (
+    typeof data[0] === 'object' &&
+    data[0] !== null &&
+    !Array.isArray(data[0])
+  ) {
     const inferredColumns = columns || Object.keys(data[0]);
     const rows = data.map(obj => inferredColumns.map(col => obj[col] ?? null));
-    
+
     const dataset: Dataset = {
       columns: inferredColumns,
       rows,
@@ -69,7 +72,7 @@ export const createDatasetFromArray = (
   if (Array.isArray(data[0])) {
     const inferredColumns = columns || data[0].map((_, i) => `Column ${i + 1}`);
     const rows = data.slice(columns ? 0 : 1); // Skip first row if no columns provided
-    
+
     const dataset: Dataset = {
       columns: inferredColumns,
       rows,
@@ -106,11 +109,17 @@ export const cloneDataset = (dataset: Dataset): Dataset => ({
   },
 });
 
-export const getColumnIndex = (dataset: Dataset, columnName: string): number => {
+export const getColumnIndex = (
+  dataset: Dataset,
+  columnName: string
+): number => {
   return dataset.columns.indexOf(columnName);
 };
 
-export const getColumnValues = (dataset: Dataset, columnName: string): any[] => {
+export const getColumnValues = (
+  dataset: Dataset,
+  columnName: string
+): any[] => {
   const index = getColumnIndex(dataset, columnName);
   if (index === -1) {
     throw new Error(`Column "${columnName}" not found`);
@@ -125,14 +134,14 @@ export const addColumn = (
   index?: number
 ): Dataset => {
   const newDataset = cloneDataset(dataset);
-  
+
   if (values.length !== dataset.rows.length) {
     throw new Error('Column values length must match number of rows');
   }
 
   const insertIndex = index ?? newDataset.columns.length;
   newDataset.columns.splice(insertIndex, 0, columnName);
-  
+
   newDataset.rows.forEach((row, rowIndex) => {
     row.splice(insertIndex, 0, values[rowIndex]);
   });
@@ -180,7 +189,7 @@ export const renameColumn = (
   newDataset.metadata.types[newName] = newDataset.metadata.types[oldName];
   newDataset.metadata.nullable[newName] = newDataset.metadata.nullable[oldName];
   newDataset.metadata.unique[newName] = newDataset.metadata.unique[oldName];
-  
+
   delete newDataset.metadata.types[oldName];
   delete newDataset.metadata.nullable[oldName];
   delete newDataset.metadata.unique[oldName];
@@ -194,10 +203,10 @@ export const renameColumn = (
 
 const calculateNullable = (dataset: Dataset): Record<string, boolean> => {
   const nullable: Record<string, boolean> = {};
-  
+
   dataset.columns.forEach((column, colIndex) => {
-    const hasNull = dataset.rows.some(row => 
-      row[colIndex] === null || row[colIndex] === undefined
+    const hasNull = dataset.rows.some(
+      row => row[colIndex] === null || row[colIndex] === undefined
     );
     nullable[column] = hasNull;
   });
@@ -207,7 +216,7 @@ const calculateNullable = (dataset: Dataset): Record<string, boolean> => {
 
 const calculateUnique = (dataset: Dataset): Record<string, boolean> => {
   const unique: Record<string, boolean> = {};
-  
+
   dataset.columns.forEach((column, colIndex) => {
     const values = dataset.rows.map(row => row[colIndex]);
     const uniqueValues = new Set(values);
@@ -226,7 +235,7 @@ export const buildExecutionGraph = (
   connections: Connection[]
 ): ExecutionGraph => {
   const graphNodes = new Map<string, GraphNode>();
-  
+
   // Initialize graph nodes
   nodes.forEach(node => {
     graphNodes.set(node.id, {
@@ -242,7 +251,7 @@ export const buildExecutionGraph = (
   connections.forEach(connection => {
     const sourceNode = graphNodes.get(connection.source);
     const targetNode = graphNodes.get(connection.target);
-    
+
     if (sourceNode && targetNode) {
       sourceNode.dependents.push(connection.target);
       targetNode.dependencies.push(connection.source);
@@ -269,13 +278,13 @@ const topologicalSort = (nodes: Map<string, GraphNode>): string[] => {
     if (visiting.has(nodeId)) {
       throw new Error(`Circular dependency detected involving node ${nodeId}`);
     }
-    
+
     if (visited.has(nodeId)) {
       return;
     }
 
     visiting.add(nodeId);
-    
+
     const node = nodes.get(nodeId);
     if (node) {
       node.dependencies.forEach(depId => visit(depId));
@@ -349,7 +358,10 @@ export const generateNodeId = (type: string): string => {
   return `${type}-${generateId()}`;
 };
 
-export const generateConnectionId = (source: string, target: string): string => {
+export const generateConnectionId = (
+  source: string,
+  target: string
+): string => {
   return `${source}-${target}-${generateId()}`;
 };
 

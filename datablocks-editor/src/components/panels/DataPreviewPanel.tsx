@@ -14,9 +14,9 @@ interface DataPreviewPanelProps {
   };
 }
 
-export const DataPreviewPanel: React.FC<DataPreviewPanelProps> = ({ 
-  selectedNode, 
-  data 
+export const DataPreviewPanel: React.FC<DataPreviewPanelProps> = ({
+  selectedNode,
+  data,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
@@ -29,16 +29,18 @@ export const DataPreviewPanel: React.FC<DataPreviewPanelProps> = ({
       20 + Math.floor(Math.random() * 40),
       ['New York', 'London', 'Tokyo', 'Paris'][Math.floor(Math.random() * 4)],
       30000 + Math.floor(Math.random() * 70000),
-      ['Engineering', 'Marketing', 'Sales', 'HR'][Math.floor(Math.random() * 4)]
+      ['Engineering', 'Marketing', 'Sales', 'HR'][
+        Math.floor(Math.random() * 4)
+      ],
     ]),
     metadata: {
       rowCount: 100,
-      columnCount: 5
-    }
+      columnCount: 5,
+    },
   };
 
   const displayData = data || (selectedNode ? mockData : null);
-  
+
   if (!displayData) {
     return (
       <div className="h-full flex flex-col p-4">
@@ -69,20 +71,21 @@ export const DataPreviewPanel: React.FC<DataPreviewPanelProps> = ({
           <h2 className="text-lg font-medium text-gray-100">Data Preview</h2>
           {selectedNode && (
             <p className="text-sm text-gray-400">
-              {selectedNode.type} node • {displayData.metadata?.rowCount || displayData.rows.length} rows
+              {selectedNode.type} node •{' '}
+              {displayData.metadata?.rowCount || displayData.rows.length} rows
             </p>
           )}
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Select
             options={[
               { value: '25', label: '25 rows' },
               { value: '50', label: '50 rows' },
-              { value: '100', label: '100 rows' }
+              { value: '100', label: '100 rows' },
             ]}
             value={pageSize.toString()}
-            onChange={(value) => {
+            onChange={value => {
               setPageSize(parseInt(value));
               setCurrentPage(1);
             }}
@@ -116,10 +119,7 @@ export const DataPreviewPanel: React.FC<DataPreviewPanelProps> = ({
                 className="hover:bg-gray-750 border-b border-gray-800"
               >
                 {row.map((cell, cellIndex) => (
-                  <td
-                    key={cellIndex}
-                    className="px-4 py-3 text-gray-100"
-                  >
+                  <td key={cellIndex} className="px-4 py-3 text-gray-100">
                     {cell?.toString() || ''}
                   </td>
                 ))}
@@ -133,9 +133,10 @@ export const DataPreviewPanel: React.FC<DataPreviewPanelProps> = ({
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-700">
           <div className="text-sm text-gray-400">
-            Showing {startIndex + 1}-{endIndex} of {displayData.rows.length} rows
+            Showing {startIndex + 1}-{endIndex} of {displayData.rows.length}{' '}
+            rows
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -145,7 +146,7 @@ export const DataPreviewPanel: React.FC<DataPreviewPanelProps> = ({
             >
               Previous
             </Button>
-            
+
             <div className="flex items-center gap-1">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 const page = i + 1;
@@ -175,7 +176,7 @@ export const DataPreviewPanel: React.FC<DataPreviewPanelProps> = ({
                 </>
               )}
             </div>
-            
+
             <Button
               variant="outline"
               size="sm"

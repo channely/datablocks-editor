@@ -1,9 +1,5 @@
-import {
-  NodeDefinition,
-  NodeRegistry,
-  NodeCategory,
-  NodeCategoryInfo,
-} from '../types';
+import type { NodeDefinition, NodeRegistry, NodeCategoryInfo } from '../types';
+import { NodeCategory } from '../types';
 
 /**
  * Node Registry Implementation
@@ -57,7 +53,9 @@ export class NodeRegistryImpl implements NodeRegistry {
     }
 
     if (this.nodes.has(definition.type)) {
-      console.warn(`Node type "${definition.type}" is already registered. Overwriting.`);
+      console.warn(
+        `Node type "${definition.type}" is already registered. Overwriting.`
+      );
     }
 
     // Validate the definition
@@ -80,17 +78,17 @@ export class NodeRegistryImpl implements NodeRegistry {
 
   getByCategory(category: NodeCategory): NodeDefinition[] {
     return Array.from(this.nodes.values()).filter(
-      (node) => node.category === category
+      node => node.category === category
     );
   }
 
   search(query: string): NodeDefinition[] {
     const lowerQuery = query.toLowerCase();
-    return Array.from(this.nodes.values()).filter((node) => {
+    return Array.from(this.nodes.values()).filter(node => {
       return (
         node.name.toLowerCase().includes(lowerQuery) ||
         node.description.toLowerCase().includes(lowerQuery) ||
-        node.tags?.some((tag) => tag.toLowerCase().includes(lowerQuery))
+        node.tags?.some(tag => tag.toLowerCase().includes(lowerQuery))
       );
     });
   }
@@ -177,7 +175,9 @@ export const registerNode = (definition: NodeDefinition): void => {
   nodeRegistry.register(definition);
 };
 
-export const getNodeDefinition = (nodeType: string): NodeDefinition | undefined => {
+export const getNodeDefinition = (
+  nodeType: string
+): NodeDefinition | undefined => {
   return nodeRegistry.get(nodeType);
 };
 
@@ -185,7 +185,9 @@ export const getAllNodes = (): NodeDefinition[] => {
   return nodeRegistry.getAll();
 };
 
-export const getNodesByCategory = (category: NodeCategory): NodeDefinition[] => {
+export const getNodesByCategory = (
+  category: NodeCategory
+): NodeDefinition[] => {
   return nodeRegistry.getByCategory(category);
 };
 

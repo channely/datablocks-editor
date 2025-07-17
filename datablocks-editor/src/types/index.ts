@@ -66,9 +66,18 @@ export interface ValidationRule {
 
 // Node processor interface
 export interface NodeProcessor {
-  execute: (inputs: Record<string, any>, config: Record<string, any>) => Promise<any>;
-  validate: (inputs: Record<string, any>, config: Record<string, any>) => ValidationResult;
-  getOutputSchema?: (inputs: Record<string, any>, config: Record<string, any>) => PortDefinition[];
+  execute: (
+    inputs: Record<string, any>,
+    config: Record<string, any>
+  ) => Promise<any>;
+  validate: (
+    inputs: Record<string, any>,
+    config: Record<string, any>
+  ) => ValidationResult;
+  getOutputSchema?: (
+    inputs: Record<string, any>,
+    config: Record<string, any>
+  ) => PortDefinition[];
 }
 
 // Validation result
@@ -122,7 +131,12 @@ export interface NodeInstance {
   dragging?: boolean;
 }
 
-export type NodeStatus = 'idle' | 'processing' | 'success' | 'error' | 'warning';
+export type NodeStatus =
+  | 'idle'
+  | 'processing'
+  | 'success'
+  | 'error'
+  | 'warning';
 
 // ============================================================================
 // CONNECTION TYPES
@@ -216,14 +230,21 @@ export interface FilterCondition {
   type: PrimitiveType;
 }
 
-export type FilterOperator = 
-  | 'equals' | 'not_equals'
-  | 'greater_than' | 'greater_than_or_equal'
-  | 'less_than' | 'less_than_or_equal'
-  | 'contains' | 'not_contains'
-  | 'starts_with' | 'ends_with'
-  | 'is_null' | 'is_not_null'
-  | 'in' | 'not_in';
+export type FilterOperator =
+  | 'equals'
+  | 'not_equals'
+  | 'greater_than'
+  | 'greater_than_or_equal'
+  | 'less_than'
+  | 'less_than_or_equal'
+  | 'contains'
+  | 'not_contains'
+  | 'starts_with'
+  | 'ends_with'
+  | 'is_null'
+  | 'is_not_null'
+  | 'in'
+  | 'not_in';
 
 export interface CompoundFilterCondition {
   operator: 'and' | 'or';
@@ -249,7 +270,14 @@ export interface AggregationConfig {
   alias?: string;
 }
 
-export type AggregationFunction = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'first' | 'last';
+export type AggregationFunction =
+  | 'count'
+  | 'sum'
+  | 'avg'
+  | 'min'
+  | 'max'
+  | 'first'
+  | 'last';
 
 // Join configuration
 export interface JoinConfig {
@@ -294,24 +322,24 @@ export interface AppState {
   // Graph state
   nodes: NodeInstance[];
   connections: Connection[];
-  
+
   // Selection state
   selectedNodes: string[];
   selectedConnections: string[];
-  
+
   // UI state
   sidebarCollapsed: boolean;
   previewPanelHeight: number;
   canvasViewport: { x: number; y: number; zoom: number };
-  
+
   // Execution state
   nodeOutputs: Map<string, any>;
   executionStatus: Map<string, NodeStatus>;
   isExecuting: boolean;
-  
+
   // Error state
   errors: AppError[];
-  
+
   // Project state
   projectName?: string;
   projectId?: string;
@@ -329,7 +357,8 @@ export type DeepPartial<T> = {
 
 export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
 
-export type OptionalFields<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+export type OptionalFields<T, K extends keyof T> = Omit<T, K> &
+  Partial<Pick<T, K>>;
 
 // Event types for the event system
 export interface NodeEvent {

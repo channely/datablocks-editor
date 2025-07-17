@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "Code Quality Analyzer",
+  "description": "Monitors source code files for changes and provides automated code quality analysis including code smells detection, design pattern suggestions, and best practices recommendations",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "datablocks-editor/src/**/*.ts",
+      "datablocks-editor/src/**/*.tsx",
+      "datablocks-editor/src/**/*.js",
+      "datablocks-editor/src/**/*.jsx"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Analyze the modified code files for potential improvements. Focus on:\n\n1. **Code Smells Detection**: Identify long methods, large classes, duplicate code, complex conditionals, and other code smells\n2. **Design Patterns**: Suggest appropriate design patterns that could improve the code structure\n3. **Best Practices**: Check for React/TypeScript best practices, proper error handling, and performance considerations\n4. **Readability**: Suggest improvements for variable naming, function structure, and code organization\n5. **Maintainability**: Identify areas that could be refactored for better maintainability\n6. **Performance**: Suggest optimizations for React components, unnecessary re-renders, and efficient data handling\n7. **React Flow Compliance**: Ensure adherence to the React Flow v11+ standards and import patterns as specified in the development standards\n\nProvide specific, actionable suggestions while maintaining existing functionality. Include code examples where helpful and prioritize the most impactful improvements."
+  }
+}

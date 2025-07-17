@@ -2,7 +2,8 @@ import React from 'react';
 import { cn } from '../../utils/cn';
 import { CheckIcon } from '@heroicons/react/24/outline';
 
-export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
+export interface CheckboxProps
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label?: string;
   description?: string;
   error?: string;
@@ -34,7 +35,7 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
               <CheckIcon className="absolute w-3 h-3 text-white pointer-events-none left-0.5 top-0.5" />
             )}
           </div>
-          
+
           {(label || description) && (
             <div className="flex-1">
               {label && (
@@ -51,10 +52,8 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
             </div>
           )}
         </div>
-        
-        {error && (
-          <p className="text-sm text-red-400 ml-7">{error}</p>
-        )}
+
+        {error && <p className="text-sm text-red-400 ml-7">{error}</p>}
       </div>
     );
   }

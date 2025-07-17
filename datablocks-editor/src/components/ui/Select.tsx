@@ -27,7 +27,7 @@ export const Select: React.FC<SelectProps> = ({
   error,
   disabled = false,
   onChange,
-  className
+  className,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const selectRef = useRef<HTMLDivElement>(null);
@@ -35,7 +35,10 @@ export const Select: React.FC<SelectProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
+      if (
+        selectRef.current &&
+        !selectRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
@@ -77,7 +80,7 @@ export const Select: React.FC<SelectProps> = ({
           {label}
         </label>
       )}
-      
+
       <div ref={selectRef} className="relative">
         <button
           type="button"
@@ -94,9 +97,9 @@ export const Select: React.FC<SelectProps> = ({
           aria-haspopup="listbox"
           aria-expanded={isOpen}
         >
-          <span className={cn(
-            selectedOption ? 'text-gray-100' : 'text-gray-400'
-          )}>
+          <span
+            className={cn(selectedOption ? 'text-gray-100' : 'text-gray-400')}
+          >
             {selectedOption?.label || placeholder}
           </span>
           <ChevronDownIcon
@@ -109,7 +112,7 @@ export const Select: React.FC<SelectProps> = ({
 
         {isOpen && (
           <div className="absolute z-50 w-full mt-1 bg-gray-700 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-auto">
-            {options.map((option) => (
+            {options.map(option => (
               <button
                 key={option.value}
                 type="button"
@@ -132,9 +135,7 @@ export const Select: React.FC<SelectProps> = ({
         )}
       </div>
 
-      {error && (
-        <p className="mt-1 text-sm text-red-400">{error}</p>
-      )}
+      {error && <p className="mt-1 text-sm text-red-400">{error}</p>}
     </div>
   );
 };

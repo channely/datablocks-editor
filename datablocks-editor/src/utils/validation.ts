@@ -1,4 +1,4 @@
-import {
+import type {
   Dataset,
   DataType,
   PrimitiveType,
@@ -19,7 +19,10 @@ import {
 // TYPE VALIDATION
 // ============================================================================
 
-export const isValidDataType = (value: any, expectedType: DataType): boolean => {
+export const isValidDataType = (
+  value: any,
+  expectedType: DataType
+): boolean => {
   switch (expectedType) {
     case 'dataset':
       return isDataset(value);
@@ -30,7 +33,9 @@ export const isValidDataType = (value: any, expectedType: DataType): boolean => 
     case 'boolean':
       return typeof value === 'boolean';
     case 'object':
-      return typeof value === 'object' && value !== null && !Array.isArray(value);
+      return (
+        typeof value === 'object' && value !== null && !Array.isArray(value)
+      );
     case 'array':
       return Array.isArray(value);
     case 'any':
@@ -57,7 +62,7 @@ export const inferPrimitiveType = (value: any): PrimitiveType => {
   if (value === null || value === undefined) {
     return 'null';
   }
-  
+
   if (typeof value === 'string') {
     // Try to detect date strings
     const dateValue = new Date(value);
@@ -66,34 +71,40 @@ export const inferPrimitiveType = (value: any): PrimitiveType => {
     }
     return 'string';
   }
-  
+
   if (typeof value === 'number') {
     return 'number';
   }
-  
+
   if (typeof value === 'boolean') {
     return 'boolean';
   }
-  
+
   return 'string'; // fallback
 };
 
-export const inferDatasetTypes = (dataset: Dataset): Record<string, PrimitiveType> => {
+export const inferDatasetTypes = (
+  dataset: Dataset
+): Record<string, PrimitiveType> => {
   const types: Record<string, PrimitiveType> = {};
-  
+
   dataset.columns.forEach((column, colIndex) => {
     const columnValues = dataset.rows.map(row => row[colIndex]);
-    const nonNullValues = columnValues.filter(val => val !== null && val !== undefined);
-    
+    const nonNullValues = columnValues.filter(
+      val => val !== null && val !== undefined
+    );
+
     if (nonNullValues.length === 0) {
       types[column] = 'null';
       return;
     }
-    
+
     // Check if all non-null values are of the same type
     const firstType = inferPrimitiveType(nonNullValues[0]);
-    const allSameType = nonNullValues.every(val => inferPrimitiveType(val) === firstType);
-    
+    const allSameType = nonNullValues.every(
+      val => inferPrimitiveType(val) === firstType
+    );
+
     if (allSameType) {
       types[column] = firstType;
     } else {
@@ -101,7 +112,7 @@ export const inferDatasetTypes = (dataset: Dataset): Record<string, PrimitiveTyp
       types[column] = 'string';
     }
   });
-  
+
   return types;
 };
 
@@ -193,7 +204,10 @@ export const validateNodeConfig = (
   Object.entries(schema).forEach(([key, fieldSchema]) => {
     const value = config[key];
 
-    if (fieldSchema.required && (value === undefined || value === null || value === '')) {
+    if (
+      fieldSchema.required &&
+      (value === undefined || value === null || value === '')
+    ) {
       errors.push({
         field: key,
         message: `${fieldSchema.label} is required`,
@@ -254,14 +268,17 @@ const validateFieldType = (value: any, expectedType: string): boolean => {
   }
 };
 
-const validateRule = (value: any, rule: ValidationRule): { valid: boolean; message: string } => {
+const validateRule = (
+  value: any,
+  rule: ValidationRule
+): { valid: boolean; message: string } => {
   switch (rule.type) {
     case 'required':
       return {
         valid: value !== undefined && value !== null && value !== '',
         message: rule.message,
       };
-    
+
     case 'min':
       if (typeof value === 'number') {
         return {
@@ -276,7 +293,7 @@ const validateRule = (value: any, rule: ValidationRule): { valid: boolean; messa
         };
       }
       return { valid: true, message: '' };
-    
+
     case 'max':
       if (typeof value === 'number') {
         return {
@@ -291,7 +308,7 @@ const validateRule = (value: any, rule: ValidationRule): { valid: boolean; messa
         };
       }
       return { valid: true, message: '' };
-    
+
     case 'pattern':
       if (typeof value === 'string') {
         const regex = new RegExp(rule.value);
@@ -301,7 +318,7 @@ const validateRule = (value: any, rule: ValidationRule): { valid: boolean; messa
         };
       }
       return { valid: true, message: '' };
-    
+
     case 'custom':
       if (rule.validator) {
         return {
@@ -310,7 +327,7 @@ const validateRule = (value: any, rule: ValidationRule): { valid: boolean; messa
         };
       }
       return { valid: true, message: '' };
-    
+
     default:
       return { valid: true, message: '' };
   }
@@ -346,7 +363,10 @@ export const validateFilterCondition = (
   }
 
   // Validate value for operator
-  if (needsValue(condition.operator) && (condition.value === undefined || condition.value === null)) {
+  if (
+    needsValue(condition.operator) &&
+    (condition.value === undefined || condition.value === null)
+  ) {
     errors.push({
       field: 'value',
       message: `Operator "${condition.operator}" requires a value`,
@@ -361,19 +381,40 @@ export const validateFilterCondition = (
 };
 
 const getValidOperatorsForType = (type: PrimitiveType): FilterOperator[] => {
-  const baseOperators: FilterOperator[] = ['equals', 'not_equals', 'is_null', 'is_not_null'];
-  
+  const baseOperators: FilterOperator[] = [
+    'equals',
+    'not_equals',
+    'is_null',
+    'is_not_null',
+  ];
+
   switch (type) {
     case 'number':
     case 'date':
-      return [...baseOperators, 'greater_than', 'greater_than_or_equal', 'less_than', 'less_than_or_equal', 'in', 'not_in'];
-    
+      return [
+        ...baseOperators,
+        'greater_than',
+        'greater_than_or_equal',
+        'less_than',
+        'less_than_or_equal',
+        'in',
+        'not_in',
+      ];
+
     case 'string':
-      return [...baseOperators, 'contains', 'not_contains', 'starts_with', 'ends_with', 'in', 'not_in'];
-    
+      return [
+        ...baseOperators,
+        'contains',
+        'not_contains',
+        'starts_with',
+        'ends_with',
+        'in',
+        'not_in',
+      ];
+
     case 'boolean':
       return baseOperators;
-    
+
     default:
       return baseOperators;
   }
@@ -407,10 +448,12 @@ export const createValidationWarning = (
   code,
 });
 
-export const combineValidationResults = (...results: ValidationResult[]): ValidationResult => {
+export const combineValidationResults = (
+  ...results: ValidationResult[]
+): ValidationResult => {
   const allErrors = results.flatMap(r => r.errors);
   const allWarnings = results.flatMap(r => r.warnings || []);
-  
+
   return {
     valid: allErrors.length === 0,
     errors: allErrors,

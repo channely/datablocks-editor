@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { cn } from '../../utils/cn';
 import { Button } from '../ui/Button';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
@@ -18,7 +18,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   rightPanel,
   bottomPanel,
   onSidebarToggle,
-  onBottomPanelResize
+  onBottomPanelResize,
 }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [bottomPanelHeight, setBottomPanelHeight] = useState(256); // 16rem in pixels
@@ -35,21 +35,24 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     e.preventDefault();
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!isResizing) return;
-    
-    const newHeight = window.innerHeight - e.clientY;
-    const minHeight = 200;
-    const maxHeight = window.innerHeight * 0.7;
-    
-    const clampedHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
-    setBottomPanelHeight(clampedHeight);
-    onBottomPanelResize?.(clampedHeight);
-  };
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isResizing) return;
 
-  const handleMouseUp = () => {
+      const newHeight = window.innerHeight - e.clientY;
+      const minHeight = 200;
+      const maxHeight = window.innerHeight * 0.7;
+
+      const clampedHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
+      setBottomPanelHeight(clampedHeight);
+      onBottomPanelResize?.(clampedHeight);
+    },
+    [isResizing, onBottomPanelResize]
+  );
+
+  const handleMouseUp = useCallback(() => {
     setIsResizing(false);
-  };
+  }, []);
 
   React.useEffect(() => {
     if (isResizing) {
@@ -60,7 +63,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isResizing]);
+  }, [isResizing, handleMouseMove, handleMouseUp]);
 
   return (
     <div className="h-screen bg-gray-900 text-gray-100 flex flex-col overflow-hidden">
@@ -113,9 +116,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                 className="h-1 bg-gray-700 hover:bg-gray-600 cursor-row-resize transition-colors"
                 onMouseDown={handleMouseDown}
               />
-              <div className="h-full overflow-hidden">
-                {bottomPanel}
-              </div>
+              <div className="h-full overflow-hidden">{bottomPanel}</div>
             </div>
           )}
         </div>
