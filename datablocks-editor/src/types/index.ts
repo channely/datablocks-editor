@@ -25,6 +25,13 @@ export interface Dataset {
     unique: Record<string, boolean>;
     created: Date;
     modified: Date;
+    source?: {
+      type: string;
+      dataType?: string;
+      hasHeader?: boolean;
+      originalLength?: number;
+      [key: string]: any;
+    };
   };
 }
 

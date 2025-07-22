@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { cn } from '../../utils/cn';
 import { Button } from '../ui/Button';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { ProjectToolbar } from './ProjectToolbar';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -84,6 +85,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           </Button>
           <h1 className="text-xl font-semibold">DataBlocks Editor</h1>
         </div>
+        
+        <ProjectToolbar />
       </header>
 
       {/* Main content area */}

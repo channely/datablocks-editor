@@ -71,7 +71,7 @@ export const createDatasetFromArray = (
   // If data is array of arrays, use provided columns or generate them
   if (Array.isArray(data[0])) {
     const inferredColumns = columns || data[0].map((_, i) => `Column ${i + 1}`);
-    const rows = data.slice(columns ? 0 : 1); // Skip first row if no columns provided
+    const rows = columns ? data : data.slice(1); // Skip first row if no columns provided
 
     const dataset: Dataset = {
       columns: inferredColumns,
@@ -347,11 +347,150 @@ const detectCycles = (nodes: Map<string, GraphNode>): string[][] => {
 };
 
 // ============================================================================
+// DATA EXPORT UTILITIES
+// ============================================================================
+
+export const exportDatasetToCSV = (dataset: Dataset, filename?: string): void => {
+  const csvContent = [
+    dataset.columns.join(','),
+    ...dataset.rows.map(row => 
+      row.map(cell => {
+        const str = cell?.toString() || '';
+        // Escape quotes and wrap in quotes if contains comma or quote
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      }).join(',')
+    )
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename || `data-export-${new Date().toISOString().split('T')[0]}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+};
+
+export const exportDatasetToJSON = (dataset: Dataset, filename?: string): void => {
+  const jsonData = dataset.rows.map(row => {
+    const obj: Record<string, any> = {};
+    dataset.columns.forEach((col, index) => {
+      obj[col] = row[index];
+    });
+    return obj;
+  });
+  
+  const jsonContent = JSON.stringify(jsonData, null, 2);
+  const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename || `data-export-${new Date().toISOString().split('T')[0]}.json`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+};
+
+export const exportDatasetToExcel = (dataset: Dataset, filename?: string): void => {
+  // Simple TSV format that Excel can open
+  const tsvContent = [
+    dataset.columns.join('\t'),
+    ...dataset.rows.map(row => 
+      row.map(cell => cell?.toString() || '').join('\t')
+    )
+  ].join('\n');
+  
+  const blob = new Blob([tsvContent], { type: 'text/tab-separated-values;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename || `data-export-${new Date().toISOString().split('T')[0]}.xlsx`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+};
+
+// ============================================================================
+// DATA FILTERING AND SORTING UTILITIES
+// ============================================================================
+
+export const filterDataset = (
+  dataset: Dataset,
+  filters: Record<string, string>
+): Dataset => {
+  let filteredRows = dataset.rows;
+
+  Object.entries(filters).forEach(([columnName, filterValue]) => {
+    if (filterValue.trim()) {
+      const columnIndex = dataset.columns.indexOf(columnName);
+      if (columnIndex !== -1) {
+        filteredRows = filteredRows.filter(row => {
+          const cellValue = row[columnIndex];
+          return cellValue?.toString().toLowerCase().includes(filterValue.toLowerCase());
+        });
+      }
+    }
+  });
+
+  return {
+    ...dataset,
+    rows: filteredRows,
+    metadata: {
+      ...dataset.metadata,
+      rowCount: filteredRows.length,
+      modified: new Date(),
+    }
+  };
+};
+
+export const sortDataset = (
+  dataset: Dataset,
+  column: string,
+  direction: 'asc' | 'desc'
+): Dataset => {
+  const columnIndex = dataset.columns.indexOf(column);
+  if (columnIndex === -1) {
+    throw new Error(`Column "${column}" not found`);
+  }
+
+  const sortedRows = [...dataset.rows].sort((a, b) => {
+    const aVal = a[columnIndex];
+    const bVal = b[columnIndex];
+    
+    // Handle null/undefined values
+    if (aVal == null && bVal == null) return 0;
+    if (aVal == null) return direction === 'asc' ? -1 : 1;
+    if (bVal == null) return direction === 'asc' ? 1 : -1;
+    
+    // Type-aware comparison
+    const dataType = dataset.metadata?.types?.[column] || 'string';
+    let comparison = 0;
+    
+    if (dataType === 'number') {
+      comparison = Number(aVal) - Number(bVal);
+    } else if (dataType === 'date') {
+      comparison = new Date(aVal).getTime() - new Date(bVal).getTime();
+    } else {
+      comparison = String(aVal).localeCompare(String(bVal));
+    }
+    
+    return direction === 'asc' ? comparison : -comparison;
+  });
+
+  return {
+    ...dataset,
+    rows: sortedRows,
+    metadata: {
+      ...dataset.metadata,
+      modified: new Date(),
+    }
+  };
+};
+
+// ============================================================================
 // ID GENERATION
 // ============================================================================
 
 export const generateId = (): string => {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 };
 
 export const generateNodeId = (type: string): string => {

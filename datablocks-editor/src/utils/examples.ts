@@ -2,6 +2,7 @@ import type { NodeDefinition, Dataset, ValidationResult } from '../types';
 import { NodeCategory } from '../types';
 import { nodeRegistry } from './nodeRegistry';
 import { createDatasetFromArray } from './dataUtils';
+import { HttpRequestExecutor } from '../engines/executors/HttpRequestExecutor';
 
 /**
  * Example node definitions and usage demonstrations
@@ -27,17 +28,11 @@ export const fileInputNodeDefinition: NodeDefinition = {
     },
   ],
   configSchema: {
-    fileType: {
-      type: 'select',
-      label: '文件类型',
-      description: '选择要加载的文件类型',
+    file: {
+      type: 'object',
+      label: '文件',
+      description: '要上传的文件',
       required: true,
-      defaultValue: 'csv',
-      options: [
-        { label: 'CSV', value: 'csv' },
-        { label: 'JSON', value: 'json' },
-        { label: 'Excel', value: 'excel' },
-      ],
     },
     hasHeader: {
       type: 'boolean',
@@ -45,52 +40,70 @@ export const fileInputNodeDefinition: NodeDefinition = {
       description: '文件第一行是否为列标题',
       defaultValue: true,
     },
+    skipEmptyLines: {
+      type: 'boolean',
+      label: '跳过空行',
+      description: '是否跳过空白行',
+      defaultValue: true,
+    },
     delimiter: {
       type: 'string',
-      label: '分隔符',
-      description: 'CSV 文件的分隔符',
-      defaultValue: ',',
-      validation: [
-        {
-          type: 'required',
-          message: '分隔符不能为空',
-        },
-      ],
+      label: 'CSV 分隔符',
+      description: 'CSV 文件的分隔符（留空自动检测）',
+      defaultValue: '',
+    },
+    maxRows: {
+      type: 'number',
+      label: '最大行数',
+      description: '限制导入的最大行数',
     },
   },
   processor: {
     execute: async (_inputs, config) => {
-      // Mock file loading - in real implementation this would handle file upload
-      const mockData = [
-        ['Name', 'Age', 'City'],
-        ['张三', 25, '北京'],
-        ['李四', 30, '上海'],
-        ['王五', 28, '广州'],
-      ];
+      // This will be handled by the FileInputExecutor
+      // The actual file processing is done in the executor
+      const file = config.file as File;
+      if (!file) {
+        throw new Error('No file provided');
+      }
 
-      const hasHeader = config.hasHeader ?? true;
-      const columns = hasHeader ? (mockData[0] as string[]) : undefined;
-      const rows = hasHeader ? mockData.slice(1) : mockData;
+      // Import and use the file parser
+      const { parseFile } = await import('./fileParser');
+      const parseOptions = {
+        hasHeader: config.hasHeader !== false,
+        delimiter: config.delimiter || '',
+        skipEmptyLines: config.skipEmptyLines !== false,
+        maxRows: config.maxRows ? parseInt(config.maxRows) : undefined,
+      };
 
-      return createDatasetFromArray(rows, columns);
+      const result = await parseFile(file, parseOptions);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to parse file');
+      }
+
+      return result.dataset!;
     },
     validate: (_inputs, config): ValidationResult => {
       const errors = [];
 
-      if (!config.fileType) {
+      if (!config.file) {
         errors.push({
-          field: 'fileType',
-          message: '请选择文件类型',
+          field: 'file',
+          message: 'File is required',
           code: 'REQUIRED_FIELD',
         });
       }
 
-      if (config.fileType === 'csv' && !config.delimiter) {
-        errors.push({
-          field: 'delimiter',
-          message: 'CSV 文件需要指定分隔符',
-          code: 'REQUIRED_FIELD',
-        });
+      if (config.maxRows) {
+        const maxRows = parseInt(config.maxRows);
+        if (isNaN(maxRows) || maxRows <= 0) {
+          errors.push({
+            field: 'maxRows',
+            message: 'Max rows must be a positive number',
+            code: 'INVALID_VALUE',
+          });
+        }
       }
 
       return {
@@ -289,34 +302,96 @@ export const pasteInputNodeDefinition: NodeDefinition = {
       description: '粘贴您的数据',
       required: true,
     },
+    hasHeader: {
+      type: 'boolean',
+      label: '包含标题行',
+      description: '数据第一行是否为列标题',
+      defaultValue: true,
+    },
   },
   processor: {
-    execute: async (inputs, config) => {
-      const { dataType, data } = config;
+    execute: async (_inputs, config) => {
+      // This will be handled by the PasteInputExecutor
+      const { dataType, data, hasHeader } = config;
 
-      if (dataType === 'json') {
-        const jsonData = JSON.parse(data);
-        if (Array.isArray(jsonData) && jsonData.length > 0) {
-          const columns = Object.keys(jsonData[0]);
-          const rows = jsonData.map(item => columns.map(col => item[col]));
-          return createDatasetFromArray(rows, columns);
-        }
+      if (!data || !data.trim()) {
+        throw new Error('No data provided');
       }
 
-      // Mock table data parsing
-      const lines = data.split('\n').filter(line => line.trim());
-      const rows = lines.map(line => line.split('\t'));
-      return createDatasetFromArray(rows.slice(1), rows[0]);
+      // Import the createDatasetFromArray function
+      const { createDatasetFromArray } = await import('./dataUtils');
+
+      switch (dataType) {
+        case 'json': {
+          const jsonData = JSON.parse(data);
+          if (!Array.isArray(jsonData)) {
+            throw new Error('JSON data must be an array');
+          }
+          if (jsonData.length === 0) {
+            throw new Error('JSON array cannot be empty');
+          }
+          return createDatasetFromArray(jsonData);
+        }
+        case 'csv': {
+          const lines = data.trim().split('\n').filter(line => line.trim());
+          const rows = lines.map(line => line.split(',').map(cell => cell.trim()));
+          
+          if (hasHeader !== false) {
+            return createDatasetFromArray(rows.slice(1), rows[0]);
+          } else {
+            const maxColumns = Math.max(...rows.map(row => row.length));
+            const columns = Array.from({ length: maxColumns }, (_, i) => `Column ${i + 1}`);
+            return createDatasetFromArray(rows, columns);
+          }
+        }
+        case 'table':
+        default: {
+          const lines = data.trim().split('\n').filter(line => line.trim());
+          const rows = lines.map(line => line.split('\t').map(cell => cell.trim()));
+          
+          if (hasHeader !== false) {
+            return createDatasetFromArray(rows.slice(1), rows[0]);
+          } else {
+            const maxColumns = Math.max(...rows.map(row => row.length));
+            const columns = Array.from({ length: maxColumns }, (_, i) => `Column ${i + 1}`);
+            return createDatasetFromArray(rows, columns);
+          }
+        }
+      }
     },
     validate: (_inputs, config): ValidationResult => {
       const errors = [];
+      
       if (!config.data?.trim()) {
         errors.push({
           field: 'data',
-          message: '请粘贴数据内容',
+          message: 'Data content is required',
           code: 'REQUIRED_FIELD',
         });
+      } else {
+        const { dataType, data } = config;
+        
+        // Validate JSON format if dataType is json
+        if (dataType === 'json') {
+          try {
+            const jsonData = JSON.parse(data);
+            if (!Array.isArray(jsonData)) {
+              errors.push({
+                field: 'data',
+                message: 'JSON data must be an array',
+                code: 'INVALID_JSON',
+              });
+            }
+          } catch {
+            errors.push({
+              field: 'data',
+              message: 'Invalid JSON format',
+              code: 'INVALID_JSON',
+            });
+          }
+        }
       }
+      
       return { valid: errors.length === 0, errors };
     },
   },
@@ -360,32 +435,42 @@ export const httpRequestNodeDefinition: NodeDefinition = {
       options: [
         { label: 'GET', value: 'GET' },
         { label: 'POST', value: 'POST' },
+        { label: 'PUT', value: 'PUT' },
+        { label: 'DELETE', value: 'DELETE' },
       ],
+    },
+    headers: {
+      type: 'object',
+      label: '请求头',
+      description: 'HTTP 请求头',
+      required: false,
+    },
+    body: {
+      type: 'string',
+      label: '请求体',
+      description: 'HTTP 请求体 (JSON格式)',
+      required: false,
+    },
+    timeout: {
+      type: 'number',
+      label: '超时时间 (ms)',
+      description: '请求超时时间',
+      required: false,
+      defaultValue: 10000,
     },
   },
   processor: {
-    execute: async (_inputs, _config) => {
-      // Mock API response
-      const mockApiData = [
-        { id: 1, name: '产品A', price: 100, category: '电子' },
-        { id: 2, name: '产品B', price: 200, category: '服装' },
-        { id: 3, name: '产品C', price: 150, category: '电子' },
-      ];
-
-      const columns = Object.keys(mockApiData[0]);
-      const rows = mockApiData.map(item => columns.map(col => item[col]));
-      return createDatasetFromArray(rows, columns);
+    execute: async (_inputs, config) => {
+      return await HttpRequestExecutor.execute({
+        url: config.url,
+        method: config.method || 'GET',
+        headers: config.headers || {},
+        body: config.body,
+        timeout: config.timeout || 10000,
+      });
     },
     validate: (_inputs, config): ValidationResult => {
-      const errors = [];
-      if (!config.url?.trim()) {
-        errors.push({
-          field: 'url',
-          message: '请输入 API URL',
-          code: 'REQUIRED_FIELD',
-        });
-      }
-      return { valid: errors.length === 0, errors };
+      return HttpRequestExecutor.validate(_inputs, config);
     },
   },
   icon: '🌐',
@@ -418,42 +503,53 @@ export const exampleDataNodeDefinition: NodeDefinition = {
       label: '数据集',
       description: '选择示例数据集',
       required: true,
-      defaultValue: 'sales',
+      defaultValue: 'sample',
       options: [
+        { label: '用户数据', value: 'sample' },
         { label: '销售数据', value: 'sales' },
-        { label: '用户数据', value: 'users' },
+        { label: '员工数据', value: 'employees' },
         { label: '产品数据', value: 'products' },
       ],
     },
   },
   processor: {
-    execute: async (inputs, config) => {
-      const datasets = {
-        sales: [
-          ['日期', '销售额', '地区', '产品'],
-          ['2024-01-01', 1000, '北京', '产品A'],
-          ['2024-01-02', 1500, '上海', '产品B'],
-          ['2024-01-03', 800, '广州', '产品A'],
-        ],
-        users: [
-          ['姓名', '年龄', '城市', '职业'],
-          ['张三', 25, '北京', '工程师'],
-          ['李四', 30, '上海', '设计师'],
-          ['王五', 28, '广州', '产品经理'],
-        ],
-        products: [
-          ['产品名', '价格', '类别', '库存'],
-          ['笔记本电脑', 5000, '电子产品', 50],
-          ['智能手机', 3000, '电子产品', 100],
-          ['运动鞋', 500, '服装', 200],
-        ],
+    execute: async (_inputs, config) => {
+      // This will be handled by the ExampleDataExecutor
+      const datasetName = config.dataset || 'sample';
+      
+      // Import the ExampleDataExecutor
+      const { ExampleDataExecutor } = await import('../engines/executors/BaseExecutors');
+      const executor = new ExampleDataExecutor();
+      
+      const context = {
+        nodeId: 'example-data-node',
+        inputs: {},
+        config,
+        metadata: {
+          executionId: 'example-exec',
+          startTime: new Date(),
+        },
       };
-
-      const selectedData = datasets[config.dataset] || datasets.sales;
-      return createDatasetFromArray(selectedData.slice(1), selectedData[0]);
+      
+      const result = await executor.execute(context);
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to generate example data');
+      }
+      
+      return result.output;
     },
-    validate: (_inputs, _config): ValidationResult => {
-      return { valid: true, errors: [] };
+    validate: (_inputs, config): ValidationResult => {
+      const errors = [];
+      
+      if (!config.dataset) {
+        errors.push({
+          field: 'dataset',
+          message: 'Dataset selection is required',
+          code: 'REQUIRED_FIELD',
+        });
+      }
+      
+      return { valid: errors.length === 0, errors };
     },
   },
   icon: '📊',
@@ -619,16 +715,33 @@ export const groupNodeDefinition: NodeDefinition = {
     },
   },
   processor: {
-    execute: async (_inputs, _config) => {
-      // Mock grouping logic - in real implementation would use inputs.data and config
-      const mockResult = [
-        ['分组', '聚合结果'],
-        ['组A', 100],
-        ['组B', 200],
-        ['组C', 150],
-      ];
-
-      return createDatasetFromArray(mockResult.slice(1), mockResult[0]);
+    execute: async (inputs, config) => {
+      // Use the actual GroupExecutor
+      const { GroupExecutor } = await import('../engines/executors/BaseExecutors');
+      const executor = new GroupExecutor();
+      
+      const context = {
+        nodeId: 'group-node',
+        inputs,
+        config: {
+          groupColumns: config.groupBy ? [config.groupBy] : [],
+          aggregations: [{
+            column: config.aggregateColumn || '',
+            function: config.aggregateFunction || 'count',
+          }],
+        },
+        metadata: {
+          executionId: 'group-exec',
+          startTime: new Date(),
+        },
+      };
+      
+      const result = await executor.execute(context);
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to group data');
+      }
+      
+      return result.output;
     },
     validate: (inputs, config): ValidationResult => {
       const errors = [];
@@ -660,7 +773,7 @@ export const chartNodeDefinition: NodeDefinition = {
   type: 'chart',
   category: NodeCategory.VISUALIZATION,
   name: '图表',
-  description: '创建柱状图、折线图、散点图等',
+  description: '创建柱状图、折线图、散点图等数据可视化',
   version: '1.0.0',
   inputs: [
     {
@@ -679,7 +792,7 @@ export const chartNodeDefinition: NodeDefinition = {
       type: 'object',
       required: false,
       multiple: false,
-      description: '生成的图表对象',
+      description: '生成的图表配置对象',
     },
   ],
   configSchema: {
@@ -693,82 +806,149 @@ export const chartNodeDefinition: NodeDefinition = {
         { label: '柱状图', value: 'bar' },
         { label: '折线图', value: 'line' },
         { label: '散点图', value: 'scatter' },
-        { label: '饼图', value: 'pie' },
       ],
     },
-    xColumn: {
+    xAxisColumn: {
       type: 'string',
-      label: 'X 轴列',
-      description: 'X 轴数据列',
+      label: 'X轴字段',
+      description: 'X轴数据字段',
       required: true,
     },
-    yColumn: {
-      type: 'string',
-      label: 'Y 轴列',
-      description: 'Y 轴数据列',
+    yAxisColumns: {
+      type: 'multiselect',
+      label: 'Y轴字段',
+      description: 'Y轴数据字段（可多选）',
       required: true,
+    },
+    chartTitle: {
+      type: 'string',
+      label: '图表标题',
+      description: '图表标题（可选）',
+      required: false,
+      defaultValue: '',
+    },
+    colorTheme: {
+      type: 'select',
+      label: '颜色主题',
+      description: '图表颜色主题',
+      required: false,
+      defaultValue: 'default',
+      options: [
+        { label: '默认', value: 'default' },
+        { label: '蓝色系', value: 'blue' },
+        { label: '绿色系', value: 'green' },
+      ],
+    },
+    showLegend: {
+      type: 'boolean',
+      label: '显示图例',
+      description: '是否显示图例',
+      required: false,
+      defaultValue: true,
     },
   },
   processor: {
     execute: async (inputs, config) => {
+      // This will be handled by ChartExecutor
       const dataset = inputs.data as Dataset;
-      const { chartType, xColumn, yColumn } = config;
+      const { 
+        chartType = 'bar', 
+        xAxisColumn, 
+        yAxisColumns = [], 
+        chartTitle = '',
+        colorTheme = 'default',
+        showLegend = true 
+      } = config;
+
+      if (!xAxisColumn || !yAxisColumns.length) {
+        throw new Error('X轴和Y轴字段都是必需的');
+      }
+
+      // Basic chart data generation for compatibility
+      const xColumnIndex = dataset.columns.indexOf(xAxisColumn);
+      const labels = dataset.rows.map(row => String(row[xColumnIndex]));
+
+      const datasets = yAxisColumns.map((yColumn: string, index: number) => {
+        const yColumnIndex = dataset.columns.indexOf(yColumn);
+        const data = dataset.rows.map(row => {
+          const value = row[yColumnIndex];
+          return typeof value === 'number' ? value : parseFloat(String(value)) || 0;
+        });
+
+        const colors = [
+          'rgba(54, 162, 235, 0.8)',
+          'rgba(255, 99, 132, 0.8)',
+          'rgba(255, 205, 86, 0.8)',
+          'rgba(75, 192, 192, 0.8)',
+          'rgba(153, 102, 255, 0.8)',
+        ];
+
+        return {
+          label: yColumn,
+          data,
+          backgroundColor: colors[index % colors.length],
+          borderColor: colors[index % colors.length].replace('0.8', '1'),
+          borderWidth: 2,
+        };
+      });
 
       return {
         type: chartType,
-        data: {
-          labels: dataset.rows.map(
-            row => row[dataset.columns.indexOf(xColumn)]
-          ),
-          datasets: [
-            {
-              label: yColumn,
-              data: dataset.rows.map(
-                row => row[dataset.columns.indexOf(yColumn)]
-              ),
-            },
-          ],
-        },
+        data: { labels, datasets },
         options: {
           responsive: true,
+          maintainAspectRatio: false,
           plugins: {
-            title: {
-              display: true,
-              text: `${chartType} 图表`,
-            },
+            legend: { display: showLegend },
+            title: { display: !!chartTitle, text: chartTitle },
           },
+          scales: {
+            x: { title: { display: true, text: xAxisColumn } },
+            y: { title: { display: true, text: yAxisColumns.length === 1 ? yAxisColumns[0] : '数值' } },
+          },
+        },
+        metadata: {
+          rowCount: dataset.rows.length,
+          xAxisColumn,
+          yAxisColumns,
+          chartType,
+          generated: new Date(),
         },
       };
     },
     validate: (inputs, config): ValidationResult => {
       const errors = [];
+      
       if (!inputs.data) {
         errors.push({
           field: 'data',
-          message: '需要输入数据',
+          message: '需要输入数据集',
           code: 'REQUIRED_INPUT',
         });
       }
-      if (!config.xColumn) {
+      
+      if (!config.xAxisColumn) {
         errors.push({
-          field: 'xColumn',
-          message: '请选择 X 轴列',
+          field: 'xAxisColumn',
+          message: '请选择X轴字段',
           code: 'REQUIRED_FIELD',
         });
       }
-      if (!config.yColumn) {
+      
+      if (!config.yAxisColumns || !Array.isArray(config.yAxisColumns) || config.yAxisColumns.length === 0) {
         errors.push({
-          field: 'yColumn',
-          message: '请选择 Y 轴列',
+          field: 'yAxisColumns',
+          message: '请至少选择一个Y轴字段',
           code: 'REQUIRED_FIELD',
         });
       }
+      
       return { valid: errors.length === 0, errors };
     },
   },
-  icon: '📈',
+  icon: '📊',
   color: '#f59e0b',
-  tags: ['visualization', 'chart', 'graph'],
+  tags: ['visualization', 'chart', 'graph', 'bar', 'line', 'scatter'],
 };
 
 // Table Node
@@ -847,68 +1027,90 @@ export const javascriptNodeDefinition: NodeDefinition = {
   type: 'javascript',
   category: NodeCategory.ADVANCED,
   name: 'JavaScript',
-  description: '执行自定义 JavaScript 代码',
+  description: '执行自定义 JavaScript 代码处理数据',
   version: '1.0.0',
   inputs: [
     {
       id: 'data',
       name: '输入数据',
-      type: 'any',
+      type: 'dataset',
       required: false,
       multiple: false,
-      description: '传入的数据',
+      description: '传入的数据集',
     },
   ],
   outputs: [
     {
       id: 'result',
       name: '执行结果',
-      type: 'any',
+      type: 'dataset',
       required: false,
       multiple: false,
       description: '代码执行结果',
     },
   ],
   configSchema: {
-    code: {
+    name: {
       type: 'string',
+      label: '节点名称',
+      description: '节点显示名称',
+      defaultValue: 'JavaScript',
+    },
+    code: {
+      type: 'object',
       label: 'JavaScript 代码',
       description: '要执行的 JavaScript 代码',
       required: true,
+      defaultValue: '// Process input data\nfunction process(data) {\n  // Your code here\n  return data;\n}',
+    },
+    timeout: {
+      type: 'number',
+      label: '执行超时 (ms)',
+      description: '代码执行的最大时间',
+      defaultValue: 5000,
+    },
+    allowConsole: {
+      type: 'boolean',
+      label: '允许控制台输出',
+      description: '允许在代码中使用 console.log',
+      defaultValue: true,
+    },
+    strictMode: {
+      type: 'boolean',
+      label: '严格模式',
+      description: '在严格模式下执行 JavaScript',
+      defaultValue: true,
     },
   },
   processor: {
     execute: async (inputs, config) => {
-      // Mock JavaScript execution
-      const { code } = config;
-      const inputData = inputs.data;
+      // Use the JavaScriptExecutor
+      const { JavaScriptExecutor } = await import('../engines/executors/JavaScriptExecutor');
+      
+      const inputData = inputs.data || null;
+      const { code, timeout, allowConsole, strictMode } = config;
 
-      // In a real implementation, this would use a safe JavaScript execution environment
       try {
-        // Simple mock execution
-        if (code.includes('return')) {
-          return { result: '代码执行成功', input: inputData };
-        }
-        return { message: '代码已执行', input: inputData };
+        const result = await JavaScriptExecutor.execute(code, inputData, {
+          timeout: timeout || 5000,
+          allowConsole: allowConsole !== false,
+          strictMode: strictMode !== false,
+        });
+        
+        return result;
       } catch (error) {
-        throw new Error(`JavaScript 执行错误: ${error.message}`);
+        throw new Error(`JavaScript 执行错误: ${error instanceof Error ? error.message : String(error)}`);
       }
     },
     validate: (inputs, config): ValidationResult => {
-      const errors = [];
-      if (!config.code?.trim()) {
-        errors.push({
-          field: 'code',
-          message: '请输入 JavaScript 代码',
-          code: 'REQUIRED_FIELD',
-        });
-      }
-      return { valid: errors.length === 0, errors };
+      // Use the JavaScriptExecutor validation
+      const { JavaScriptExecutor } = require('../engines/executors/JavaScriptExecutor');
+      return JavaScriptExecutor.validate(inputs, config);
     },
   },
   icon: '⚡',
   color: '#8b5cf6',
-  tags: ['advanced', 'javascript', 'custom'],
+  tags: ['advanced', 'javascript', 'custom', 'code'],
 };
 
 // Register all example nodes
