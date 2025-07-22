@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect, useMemo } from 'react';
 import ReactFlow, {
   addEdge,
   useNodesState,
@@ -9,8 +9,6 @@ import ReactFlow, {
   BackgroundVariant,
   ReactFlowProvider,
   Panel,
-  getRectOfNodes,
-  getTransformForBounds,
 } from 'reactflow';
 import type {
   Node,
@@ -23,6 +21,7 @@ import type {
   OnEdgesChange,
   OnInit,
   Connection,
+  OnMove,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -30,7 +29,7 @@ import { useAppStore } from '../../stores/appStore';
 import { CustomNode } from '../nodes/CustomNode';
 import { cn } from '../../utils/cn';
 
-// Define custom node types
+// Define custom node types outside component to prevent React Flow warnings
 const nodeTypes = {
   custom: CustomNode,
 };
@@ -72,8 +71,8 @@ export const Canvas: React.FC<CanvasProps> = ({ className }) => {
     setCanvasViewport,
   } = useAppStore();
 
-  // Convert store nodes to React Flow nodes
-  const reactFlowNodes: Node[] = storeNodes.map(node => ({
+  // Convert store nodes to React Flow nodes - memoized to prevent React Flow warnings
+  const reactFlowNodes: Node[] = useMemo(() => storeNodes.map(node => ({
     id: node.id,
     type: 'custom',
     position: node.position,
@@ -87,10 +86,10 @@ export const Canvas: React.FC<CanvasProps> = ({ className }) => {
     },
     selected: node.selected,
     dragging: node.dragging,
-  }));
+  })), [storeNodes]);
 
-  // Convert store connections to React Flow edges
-  const reactFlowEdges: Edge[] = storeConnections.map(connection => ({
+  // Convert store connections to React Flow edges - memoized to prevent React Flow warnings
+  const reactFlowEdges: Edge[] = useMemo(() => storeConnections.map(connection => ({
     id: connection.id,
     source: connection.source,
     target: connection.target,
@@ -98,7 +97,7 @@ export const Canvas: React.FC<CanvasProps> = ({ className }) => {
     targetHandle: connection.targetHandle,
     animated: connection.animated || false,
     style: connection.style || defaultEdgeOptions.style,
-  }));
+  })), [storeConnections]);
 
   // Use React Flow state management for local updates
   const [nodes, setNodes, onNodesChange] = useNodesState(reactFlowNodes);
@@ -194,8 +193,8 @@ export const Canvas: React.FC<CanvasProps> = ({ className }) => {
   );
 
   // Handle viewport changes
-  const handleViewportChange = useCallback(
-    (event: MouseEvent | TouchEvent, viewport: { x: number; y: number; zoom: number }) => {
+  const handleViewportChange = useCallback<OnMove>(
+    (event, viewport) => {
       setCanvasViewport(viewport);
     },
     [setCanvasViewport]
@@ -269,17 +268,7 @@ export const Canvas: React.FC<CanvasProps> = ({ className }) => {
             event.preventDefault();
             // Fit view to show all nodes
             if (reactFlowInstance && nodes.length > 0) {
-              const nodesBounds = getRectOfNodes(nodes);
-              const viewport = reactFlowInstance.getViewport();
-              const transform = getTransformForBounds(
-                nodesBounds,
-                viewport.width || 800,
-                viewport.height || 600,
-                0.5,
-                2,
-                0.1
-              );
-              reactFlowInstance.setViewport(transform);
+              reactFlowInstance.fitView({ padding: 0.1 });
             }
           }
           break;

@@ -1113,8 +1113,15 @@ export const javascriptNodeDefinition: NodeDefinition = {
   tags: ['advanced', 'javascript', 'custom', 'code'],
 };
 
+// Track if nodes have been registered to prevent duplicate registrations
+let nodesRegistered = false;
+
 // Register all example nodes
 export const registerExampleNodes = (): void => {
+  if (nodesRegistered) {
+    return; // Skip if already registered
+  }
+  
   nodeRegistry.register(fileInputNodeDefinition);
   nodeRegistry.register(pasteInputNodeDefinition);
   nodeRegistry.register(httpRequestNodeDefinition);
@@ -1125,6 +1132,8 @@ export const registerExampleNodes = (): void => {
   nodeRegistry.register(chartNodeDefinition);
   nodeRegistry.register(tableNodeDefinition);
   nodeRegistry.register(javascriptNodeDefinition);
+  
+  nodesRegistered = true;
 };
 
 // Example usage demonstration

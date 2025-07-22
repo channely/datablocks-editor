@@ -14,8 +14,20 @@ export const DataPreviewPanel: React.FC<DataPreviewPanelProps> = ({ data }) => {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [showExportMenu, setShowExportMenu] = useState(false);
 
+  // Early return if no data
+  if (!data || !data.columns || !data.rows) {
+    return (
+      <div className="flex items-center justify-center h-32 text-gray-400">
+        No data available
+      </div>
+    );
+  }
+
   // Filter and sort data
   const processedData = useMemo(() => {
+    if (!data || !data.rows || !Array.isArray(data.rows)) {
+      return [];
+    }
     let filteredRows = data.rows;
 
     // Apply filters
@@ -107,10 +119,6 @@ export const DataPreviewPanel: React.FC<DataPreviewPanelProps> = ({ data }) => {
     
     setShowExportMenu(false);
   };
-
-  if (!data || !data.columns || !data.rows) {
-    return <div>No data available</div>;
-  }
 
   return (
     <div className="data-preview-panel p-4">

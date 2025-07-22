@@ -46,7 +46,17 @@ export const BottomPanel: React.FC<BottomPanelProps> = ({
 
     switch (activeTab) {
       case 'data':
-        return <DataPreviewPanel selectedNode={selectedNode} />;
+        // Check if selectedNode has output data
+        const nodeData = selectedNode?.outputs?.data;
+        if (nodeData && nodeData.columns && nodeData.rows) {
+          return <DataPreviewPanel data={nodeData} />;
+        } else {
+          return (
+            <div className="flex items-center justify-center h-32 text-gray-400">
+              {selectedNode ? 'No data available for this node' : 'Select a node to view data'}
+            </div>
+          );
+        }
       case 'errors':
         return <ErrorLogPanel className="flex-1" />;
       default:

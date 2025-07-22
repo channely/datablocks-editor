@@ -52,10 +52,9 @@ export class NodeRegistryImpl implements NodeRegistry {
       throw new Error('Node definition must have id and type');
     }
 
+    // Skip registration if already exists to prevent duplicate warnings
     if (this.nodes.has(definition.type)) {
-      console.warn(
-        `Node type "${definition.type}" is already registered. Overwriting.`
-      );
+      return; // Silently skip if already registered
     }
 
     // Validate the definition
