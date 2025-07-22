@@ -16,7 +16,7 @@ DataBlocks 是一个基于节点的数据处理和可视化编辑器，允许用
 2. WHEN 用户从节点库拖拽节点到画布 THEN 系统 SHALL 在指定位置创建节点实例
 3. WHEN 用户点击并拖拽画布上的节点 THEN 系统 SHALL 允许节点在画布上自由移动
 4. WHEN 用户从一个节点的输出端口拖拽到另一个节点的输入端口 THEN 系统 SHALL 创建连接线
-5. WHEN 用户右键点击节点 THEN 系统 SHALL 显示删除选项
+5. WHEN 用户鼠标hover节点之上 THEN 系统 SHALL 在卡片右上角显示圆形删除按钮
 6. WHEN 用户删除节点 THEN 系统 SHALL 同时删除所有相关连接
 
 ### 需求 2 - 节点库管理

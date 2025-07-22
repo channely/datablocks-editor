@@ -83,6 +83,7 @@ export const Canvas: React.FC<CanvasProps> = ({ className }) => {
       status: node.status,
       error: node.error,
       selected: node.selected,
+      name: node.data.name || node.type,
     },
     selected: node.selected,
     dragging: node.dragging,
