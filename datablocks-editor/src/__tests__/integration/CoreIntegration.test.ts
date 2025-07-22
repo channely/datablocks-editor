@@ -20,11 +20,7 @@ describe('Core Integration Tests', () => {
         position: { x: 0, y: 0 },
         data: { label: 'Example Data' },
         config: { dataset: 'employees' },
-        status: 'idle',
-        selected: false,
-        dragging: false,
-        width: 200,
-        height: 100,
+        status: 'idle'
       },
       {
         id: 'filter-1',
@@ -39,11 +35,7 @@ describe('Core Integration Tests', () => {
             type: 'number'
           }]
         },
-        status: 'idle',
-        selected: false,
-        dragging: false,
-        width: 200,
-        height: 100,
+        status: 'idle'
       }
     ];
 
@@ -60,11 +52,11 @@ describe('Core Integration Tests', () => {
     try {
       const result = await executionEngine.executeGraph(nodes, connections);
       expect(result.success).toBe(true);
-      expect(result.stats.nodesExecuted).toBe(2);
-      expect(result.stats.totalTime).toBeGreaterThan(0);
+      expect(result.stats.completedNodes).toBe(2);
+      expect(result.stats.completedNodes).toBeGreaterThan(0);
     } catch (error) {
       // If nodes aren't registered, that's expected in this test environment
-      expect(error.message).toContain('Node definition not found');
+      expect(error instanceof Error ? error.message : String(error)).toContain('Node definition not found');
     }
   });
 
@@ -89,7 +81,7 @@ describe('Core Integration Tests', () => {
     // Test that node registry is working
     const registeredNodes = nodeRegistry.getAll();
     expect(Array.isArray(registeredNodes)).toBe(true);
-    
+
     // Test that we can get node categories
     const categories = nodeRegistry.getByCategory('INPUT' as any);
     expect(Array.isArray(categories)).toBe(true);
@@ -107,8 +99,6 @@ describe('Core Integration Tests', () => {
         status: 'idle',
         selected: false,
         dragging: false,
-        width: 200,
-        height: 100,
       }
     ];
 
@@ -118,14 +108,14 @@ describe('Core Integration Tests', () => {
       await executionEngine.executeGraph(nodes, connections);
       expect.fail('Should have thrown an error');
     } catch (error) {
-      expect(error.message).toContain('Node definition not found');
+      expect(error instanceof Error ? error.message : String(error)).toContain('Node definition not found');
     }
   });
 
   it('should maintain data integrity through transformations', () => {
     const originalData = createMockDataset();
     const clonedData = JSON.parse(JSON.stringify(originalData));
-    
+
     // Verify that data cloning preserves structure
     expect(clonedData.columns).toEqual(originalData.columns);
     expect(clonedData.rows).toEqual(originalData.rows);

@@ -1,10 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Handle, Position } from 'reactflow';
-import { Input } from '../ui/Input';
-import { Select, type SelectOption } from '../ui/Select';
-import { Button } from '../ui/Button';
-import { Textarea } from '../ui/Textarea';
-import { cn } from '../../utils/cn';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 type NodeStatus = 'idle' | 'loading' | 'success' | 'error';

@@ -55,7 +55,8 @@ export class HealthChecker {
       }
     } catch (error) {
       result.checks.nodeRegistry = false;
-      result.details.errors.push(`Node registry error: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      result.details.errors.push(`Node registry error: ${errorMessage}`);
     }
 
     // Check performance monitoring
@@ -65,7 +66,8 @@ export class HealthChecker {
       result.details.performanceMetrics = metrics;
     } catch (error) {
       result.checks.performance = false;
-      result.details.errors.push(`Performance monitoring error: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      result.details.errors.push(`Performance monitoring error: ${errorMessage}`);
     }
 
     // Check memory usage
@@ -89,7 +91,8 @@ export class HealthChecker {
       }
     } catch (error) {
       result.checks.memory = false;
-      result.details.errors.push(`Memory check error: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      result.details.errors.push(`Memory check error: ${errorMessage}`);
     }
 
     // Check localStorage
@@ -100,7 +103,8 @@ export class HealthChecker {
       result.checks.localStorage = true;
     } catch (error) {
       result.checks.localStorage = false;
-      result.details.errors.push(`localStorage not available: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      result.details.errors.push(`localStorage not available: ${errorMessage}`);
     }
 
     // Check Web Workers support
@@ -111,7 +115,8 @@ export class HealthChecker {
       }
     } catch (error) {
       result.checks.webWorkers = false;
-      result.details.errors.push(`Web Workers check error: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      result.details.errors.push(`Web Workers check error: ${errorMessage}`);
     }
 
     // Determine overall status
@@ -147,7 +152,7 @@ export class HealthChecker {
     }));
     
     // Simulate data processing
-    const processed = testData
+    testData
       .filter(item => item.value > 500)
       .sort((a, b) => b.value - a.value)
       .slice(0, 100);

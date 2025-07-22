@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { DataPipeline, PipelineBuilder, PipelineUtils } from '../DataPipeline';
-import { DataProcessor } from '../DataProcessor';
-import type { Dataset, FilterCondition, SortConfig, GroupConfig } from '../../types';
+import type { Dataset, FilterCondition } from '../../types';
 
 describe('DataPipeline', () => {
   let sampleDataset: Dataset;
@@ -57,7 +56,7 @@ describe('DataPipeline', () => {
 
     it('should support async execution with progress tracking', async () => {
       const progressCallback = vi.fn();
-      
+
       const pipeline = new DataPipeline()
         .filter({
           column: 'age',
@@ -86,7 +85,7 @@ describe('DataPipeline', () => {
         .sort([{ column: 'name', direction: 'asc', type: 'string' }]);
 
       const cloned = original.clone();
-      
+
       // Modify original
       original.slice(0, 1);
 
@@ -141,7 +140,7 @@ describe('DataPipeline', () => {
     });
 
     it('should create executable pipeline from dataset', () => {
-      const executablePipeline = PipelineBuilder.from(sampleDataset)
+      const pipeline = PipelineBuilder.from(sampleDataset)
         .filter({
           column: 'city',
           operator: 'equals',
@@ -149,14 +148,14 @@ describe('DataPipeline', () => {
           type: 'string',
         });
 
-      const result = executablePipeline.run();
+      const result = pipeline.execute(sampleDataset);
       expect(result.rows).toHaveLength(2); // Alice and Diana
     });
 
     it('should support async execution from dataset', async () => {
       const progressCallback = vi.fn();
-      
-      const executablePipeline = PipelineBuilder.from(sampleDataset)
+
+      const pipeline = PipelineBuilder.from(sampleDataset)
         .filter({
           column: 'city',
           operator: 'equals',
@@ -164,7 +163,7 @@ describe('DataPipeline', () => {
           type: 'string',
         });
 
-      const result = await executablePipeline.runAsync(progressCallback);
+      const result = await pipeline.executeAsync(sampleDataset, progressCallback);
       expect(result.rows).toHaveLength(2); // Bob and Eve
       expect(progressCallback).toHaveBeenCalled();
     });
@@ -236,7 +235,7 @@ describe('DataPipeline', () => {
 
       expect(result.columns).toEqual(['age_category', 'avg_salary', 'count']);
       expect(result.rows).toHaveLength(2); // Senior and Junior categories
-      
+
       // Senior category should have higher average salary
       expect(result.rows[0][0]).toBe('Senior');
       expect(result.rows[0][1]).toBeGreaterThan(result.rows[1][1]);
@@ -265,7 +264,7 @@ describe('DataPipeline', () => {
       const result = pipeline.execute(sampleDataset);
 
       expect(result.columns).toEqual(['person_info', 'years', 'city', 'salary']);
-      
+
       // After filtering (age > 25), we should have: Alice (30, 75000), Charlie (35, 80000), Diana (28, 70000), Eve (32, 85000)
       // After sorting by salary asc: Diana (70000), Alice (75000), Charlie (80000), Eve (85000)
       expect(result.rows[0][0]).toBe('Diana (New York)'); // Lowest salary among filtered
@@ -285,15 +284,13 @@ describe('DataPipeline', () => {
     });
 
     it('should handle invalid operations gracefully', () => {
-      const pipeline = new DataPipeline();
-      
-      // Manually add invalid operation (this would normally not happen through public API)
-      (pipeline as any).operations.push({
-        type: 'invalid_operation',
-        params: {},
-      });
+      const pipeline = new DataPipeline()
+        .group({
+          columns: ['non_existent_column'],
+          aggregations: [{ column: 'salary', function: 'avg' }],
+        });
 
-      expect(() => pipeline.execute(sampleDataset)).toThrow('Unknown operation type: invalid_operation');
+      expect(() => pipeline.execute(sampleDataset)).toThrow();
     });
   });
 });

@@ -28,6 +28,21 @@ export const createMockDataset = (overrides?: Partial<Dataset>): Dataset => ({
   ...overrides,
 });
 
+// Test execution utilities
+export const expectExecutionSuccess = (result: any) => {
+  expect(result).toBeDefined();
+  expect(result.success).toBe(true);
+  expect(result.stats).toBeDefined();
+  expect(result.stats.totalNodes).toBeGreaterThan(0);
+  expect(result.stats.completedNodes).toBe(result.stats.totalNodes);
+  expect(result.stats.failedNodes).toBe(0);
+};
+
+// Error assertion helpers
+export const expectErrorWithMessage = (error: unknown, expectedMessage: string) => {
+  expect(error instanceof Error ? error.message : String(error)).toContain(expectedMessage);
+};
+
 export const createMockNode = (overrides?: Partial<NodeInstance>): NodeInstance => ({
   id: 'test-node-1',
   type: 'filter',

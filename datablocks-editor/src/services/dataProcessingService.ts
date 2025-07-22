@@ -58,7 +58,7 @@ export class DataProcessingService {
       this.worker = new Worker(URL.createObjectURL(blob));
 
       this.worker.onmessage = (event) => {
-        const { type, result, error } = event.data;
+        const { type, error } = event.data;
         this.isProcessingFlag = false;
         this.currentOperation = null;
 
@@ -92,6 +92,9 @@ export class DataProcessingService {
       throw new Error('Another operation is already in progress');
     }
 
+    // Store reference to worker to avoid null check issues
+    const worker = this.worker;
+
     return new Promise((resolve, reject) => {
       this.isProcessingFlag = true;
       this.currentOperation = 'process';
@@ -105,9 +108,9 @@ export class DataProcessingService {
 
       const messageHandler = (event: MessageEvent) => {
         const { type, result, error } = event.data;
-        
+
         clearTimeout(timeoutId);
-        this.worker?.removeEventListener('message', messageHandler);
+        worker.removeEventListener('message', messageHandler);
         this.isProcessingFlag = false;
         this.currentOperation = null;
 
@@ -118,8 +121,8 @@ export class DataProcessingService {
         }
       };
 
-      this.worker.addEventListener('message', messageHandler);
-      this.worker.postMessage({
+      worker.addEventListener('message', messageHandler);
+      worker.postMessage({
         type: 'process',
         data,
         options
